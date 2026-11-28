@@ -1,0 +1,13 @@
+[Unit]
+Description=Uhrzeit aus der Echtzeituhr DS3231 lesen
+DefaultDependencies=no
+After=systemd-modules-load.service
+Before=time-sync.target multitool.service
+ConditionPathExists=/dev/rtc0
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/hwclock --hctosys --utc
+
+[Install]
+WantedBy=sysinit.target

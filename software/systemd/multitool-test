@@ -1,0 +1,23 @@
+#!/bin/bash
+# Testwerkzeug starten. Das Hauptprogramm wird dafür kurz angehalten.
+#   multitool-test               zeigt die Liste
+#   multitool-test mic_test      startet tools/mic_test.py
+T=/opt/multitool/app/tools
+if [ -z "${1:-}" ]; then
+  echo "Verfügbare Tests:"
+  echo "  mic_test        Etappe 1: kommen alle 7 Mikrofone an?"
+  echo "  calibrate       Etappe 2: Kanäle, LED-Ring und Richtung einstellen"
+  echo "  direction_test  Richtung laufend anzeigen"
+  echo "  led_test        LEDs einzeln und in Farben"
+  echo "  buttons_test    Tastenkreuz, Drehencoder, Aufnahme-Taster"
+  echo "  siren_test      Sirene kurz (laut!)"
+  echo "  battery_test    Akku-Spannung und Strom"
+  echo "  record_clip     Trainingsaufnahme:  multitool-test record_clip drohne 10"
+  exit 0
+fi
+NAME="$1"; shift
+[ -f "$T/$NAME.py" ] || { echo "Unbekannter Test: $NAME"; exit 1; }
+WAS=$(systemctl is-active multitool)
+[ "$WAS" = "active" ] && sudo systemctl stop multitool
+cd "$T" && sudo MULTITOOL_DATA=/opt/multitool/data /opt/multitool/venv/bin/python "$NAME.py" "$@"
+[ "$WAS" = "active" ] && sudo systemctl start multitool

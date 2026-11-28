@@ -1,0 +1,17 @@
+[Unit]
+Description=Pi Multitool
+After=network.target sound.target multitool-rtc.service
+Wants=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/multitool/app
+ExecStart=/opt/multitool/venv/bin/python -m multitool
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=3
+User=root
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target

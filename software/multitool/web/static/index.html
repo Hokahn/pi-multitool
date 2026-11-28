@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pi Multitool</title>
+<style>
+:root{--bg:#0f1318;--panel:#171d24;--line:#26303b;--text:#e8edf2;--muted:#93a1b0;--acc:#3d8bff;--red:#ff5a5a;--ok:#5ad17a;--warn:#ffc531}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:#0b0f13ee;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:8px 14px}
+header b{font-size:16px}
+header .st{margin-left:auto;display:flex;gap:12px;color:var(--muted);font-size:13px;white-space:nowrap}
+nav{display:flex;gap:4px;padding:6px 10px;overflow-x:auto;background:#0b0f13;border-bottom:1px solid var(--line)}
+nav button{flex:0 0 auto}
+main{max-width:1100px;margin:0 auto;padding:12px 14px 60px}
+button,select,input{font:inherit;color:var(--text);background:#202833;border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+button{cursor:pointer}
+button:hover{border-color:#3a4756}
+button.on{background:var(--acc);border-color:var(--acc)}
+button.danger{background:#3a1c1f;border-color:#6b2a2f}
+button.rec{background:#5a1d1f;border-color:#a33}
+.tab{display:none}.tab.show{display:block}
+.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card h3{margin:0 0 10px;font-size:15px}
+.live{position:relative}
+.live img{width:100%;display:block;border-radius:10px;background:#000;aspect-ratio:5/3;object-fit:contain;touch-action:none}
+.modes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.modes button{border-left:5px solid var(--c)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.opt:last-child{border-bottom:0}
+.opt>label:first-child{flex:1}
+.opt small{display:block;color:var(--muted);font-size:12px}
+.opt select,.opt input[type=number],.opt input[type=text]{max-width:200px;width:100%}
+.sw{position:relative;width:46px;height:26px;flex:0 0 46px;display:inline-block}
+.sw input{display:none}.sw span{position:absolute;inset:0;background:#323d49;border-radius:20px;transition:.2s}
+.sw span:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.sw input:checked+span{background:var(--acc)}.sw input:checked+span:before{transform:translateX(20px)}
+.hud{color:var(--muted);font-size:13px;margin-top:6px}
+.msg{color:var(--warn);font-weight:600;min-height:1.2em}
+.ring{width:120px;height:120px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600}
+.files{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.file{background:#121820;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:13px}
+.file img,.file video{width:100%;border-radius:6px;background:#000;max-height:140px;object-fit:cover}
+.file audio{width:100%}
+.file .n{word-break:break-all;margin:4px 0}
+.file .a{display:flex;gap:6px;flex-wrap:wrap}
+.file .a a,.file .a button{font-size:12px;padding:4px 8px}
+a{color:#8cb8ff}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv div:nth-child(odd){color:var(--muted)}
+.keys button{min-width:52px}
+.pad{display:grid;grid-template-columns:repeat(3,52px);gap:6px}
+.bar{height:8px;background:#26303b;border-radius:5px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ok)}
+</style>
+</head>
+<body>
+<header>
+  <b>Pi Multitool</b>
+  <div class="st"><span id="hRec"></span><span id="hNet"></span><span id="hBat"></span></div>
+</header>
+<nav>
+  <button data-t="live" class="on">Live</button>
+  <button data-t="rec">Aufnahmen</button>
+  <button data-t="ev">Ereignisse</button>
+  <button data-t="set">Einstellungen</button>
+  <button data-t="sys">System</button>
+</nav>
+<main>
+<section id="live" class="tab show">
+  <div class="modes" id="modes"></div>
+  <div class="grid">
+    <div>
+      <div class="card live">
+        <img id="img" src="/stream.mjpg" alt="Livebild">
+        <div class="msg" id="msg"></div>
+        <div class="hud" id="hud"></div>
+        <div class="row">
+          <button class="rec" onclick="act('record')">Aufnahme (kurz)</button>
+          <button onclick="act('record_long')">Aufnahme (lang)</button>
+          <button id="maskBtn" style="display:none" onclick="maskMode()">Maske zeichnen</button>
+          <button id="maskClr" style="display:none" onclick="setMasks([])">Masken löschen</button>
+        </div>
+        <div class="row" id="simRow" style="display:none">
+          <button onclick="act('sim_clap')">Sim: doppelt klatschen</button>
+          <button onclick="act('sim_drone')">Sim: Drohne an/aus</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3 id="optTitle">Einstellungen des Modus</h3>
+        <div id="opts"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>LED-Ring, Tastenkreuz und Rad am Gerät</h3>
+        <div style="display:flex;gap:16px;align-items:center">
+          <svg class="ring" id="ring" viewBox="-60 -60 120 120"></svg>
+          <div class="keys">
+            <div class="pad">
+              <span></span><button onclick="key('up')">▲</button><span></span>
+              <button onclick="key('left')">◀</button><button onclick="key('ok')">OK</button><button onclick="key('right')">▶</button>
+              <span></span><button onclick="key('down')">▼</button><span></span>
+            </div>
+            <div class="row" style="margin-top:8px"><button onclick="key('enc',-1)">Rad ↺</button><button onclick="key('enc_press')">Rad drücken</button><button onclick="key('enc',1)">Rad ↻</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="rec" class="tab">
+  <div class="row">
+    <select id="recMode" onchange="loadRec()"><option value="">Alle Modi</option></select>
+    <button onclick="loadRec()">Aktualisieren</button>
+    <button onclick="zipSel()">Auswahl als ZIP</button>
+  </div>
+  <div class="files" id="files"></div>
+</section>
+
+<section id="ev" class="tab">
+  <div class="row">
+    <select id="evMode" onchange="loadEv()"><option value="">Alle Modi</option></select>
+    <button onclick="loadEv()">Aktualisieren</button>
+    <a href="/api/events.csv"><button>CSV herunterladen</button></a>
+  </div>
+  <div class="card"><table><thead><tr><th>Zeit</th><th>Modus</th><th>Art</th><th>Bezeichnung</th><th>Richtung</th><th>Pegel / Konf.</th><th>Datei</th></tr></thead><tbody id="evBody"></tbody></table></div>
+</section>
+
+<section id="set" class="tab">
+  <div id="globals"></div>
+  <div class="card" style="margin-top:14px">
+    <h3>Heim-WLAN hinzufügen</h3>
+    <div class="row"><input id="wSsid" placeholder="WLAN-Name"><input id="wPw" type="password" placeholder="Passwort"><button onclick="addWifi()">Verbinden</button></div>
+    <div class="hud" id="wMsg"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>Passwort der Webseite ändern</h3>
+    <div class="row"><input id="newPw" type="password" placeholder="neues Passwort"><button onclick="chPw()">Ändern</button></div>
+  </div>
+</section>
+
+<section id="sys" class="tab">
+  <div class="grid">
+    <div class="card"><h3>Zustand</h3><div class="kv" id="sysKv"></div></div>
+    <div class="card"><h3>Netzwerk</h3><div class="kv" id="netKv"></div>
+      <div class="row"><button onclick="act('hotspot')">Hotspot starten</button><button onclick="act('wifi')">Zurück ins WLAN</button></div>
+      <img id="qr" style="width:160px;display:none;background:#fff;border-radius:8px;padding:6px" alt="QR-Code Hotspot">
+    </div>
+  </div>
+  <div class="row">
+    <button onclick="act('siren_test')">Sirene 1 s testen</button>
+    <button onclick="act('leds_test')">LEDs testen</button>
+    <button class="danger" onclick="confirm('Neu starten?')&&act('reboot')">Neustart</button>
+    <button class="danger" onclick="confirm('Herunterfahren?')&&act('shutdown')">Herunterfahren</button>
+  </div>
+</section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+let S={}, OPT=null, masking=false, maskStart=null, curMode=null;
+
+async function api(path, body, method){
+  const r = await fetch(path, body!==undefined ? {method:method||'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)} : {method:method||'GET'});
+  if(r.status===401){location.href='/login';return null}
+  const ct=r.headers.get('content-type')||'';
+  return ct.includes('json') ? r.json() : r;
+}
+const act = n => api('/api/action',{name:n});
+const key = (e,d) => api('/api/key',{event:e,dir:d});
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('show',t.id===b.dataset.t));
+  if(b.dataset.t==='rec')loadRec(); if(b.dataset.t==='ev')loadEv(); if(b.dataset.t==='set')loadGlobals();
+});
+
+function fmtBat(b){ if(!b||b.percent==null) return 'Akku ?'; return (b.charging?'lädt ':'')+b.percent+' %' }
+
+async function poll(){
+  const s = await api('/api/status'); if(!s) return; S=s;
+  $('#hBat').textContent = fmtBat(s.battery);
+  $('#hNet').textContent = {wifi:'WLAN '+s.network.ssid,hotspot:'Hotspot',aus:'WLAN aus'}[s.network.mode]||'offline';
+  $('#hRec').textContent = s.recording ? '● REC' : ''; $('#hRec').style.color='var(--red)';
+  $('#hud').textContent = (s.hud||[]).join('  ·  ');
+  $('#msg').textContent = s.message || (!s.audio_ok ? 'Kein Mikrofon: '+(s.audio_error||'') : '') || (s.camera_error?('Kamera: '+s.camera_error):'');
+  $('#simRow').style.display = s.sim ? '' : 'none';
+  const isCam = s.mode==='surveillance_cam';
+  $('#maskBtn').style.display = $('#maskClr').style.display = isCam ? '' : 'none';
+  if(!$('#modes').children.length || curMode!==s.mode){
+    $('#modes').innerHTML = s.modes.map((m,i)=>`<button style="--c:${m.color}" class="${m.key===s.mode?'on':''}" onclick="setMode('${m.key}')">${i+1} ${m.name}</button>`).join('');
+    if(curMode!==s.mode){curMode=s.mode; loadOpts()}
+    const sel = s.modes.map(m=>`<option value="${m.key}">${m.name}</option>`).join('');
+    if($('#recMode').options.length<2){$('#recMode').innerHTML+=sel; $('#evMode').innerHTML+=sel}
+  }
+  drawRing(s.leds);
+  if($('#sys').classList.contains('show')) sysView(s);
+}
+setInterval(poll, 1000); poll();
+
+function drawRing(cols){
+  let h='<circle r="50" fill="none" stroke="#26303b" stroke-width="2"/>';
+  (cols||[]).forEach((c,i)=>{const a=(i*30-90)*Math.PI/180;
+    const on = c!=='#000000';
+    h+=`<circle cx="${45*Math.cos(a)}" cy="${45*Math.sin(a)}" r="7" fill="${on?c:'#1b222b'}" stroke="#3a4756"/>`;
+    h+=`<text x="${32*Math.cos(a)}" y="${32*Math.sin(a)+3}" font-size="8" fill="#93a1b0" text-anchor="middle">${i}</text>`});
+  $('#ring').innerHTML=h;
+}
+
+async function setMode(k){ await api('/api/mode',{key:k}); setTimeout(()=>{poll();loadOpts()},800) }
+
+function control(o, onchange){
+  const id='o_'+Math.random().toString(36).slice(2);
+  let c;
+  if(o.kind==='bool') c=`<label class="sw"><input type="checkbox" id="${id}" ${o.value?'checked':''}><span></span></label>`;
+  else if(o.kind==='choice') c=`<select id="${id}">${o.choices.map(x=>`<option value="${x.value}" ${String(x.value)===String(o.value)?'selected':''}>${x.label}</option>`).join('')}</select>`;
+  else if(o.kind==='int'||o.kind==='float') c=`<input type="number" id="${id}" value="${o.value}" ${o.min!=null?'min='+o.min:''} ${o.max!=null?'max='+o.max:''} step="${o.step||(o.kind==='int'?1:0.1)}">`;
+  else c=`<input type="text" id="${id}" value="${(o.value??'').toString().replace(/"/g,'&quot;')}">`;
+  const html=`<div class="opt"><label for="${id}">${o.label}${o.unit?' ('+o.unit+')':''}${o.help?'<small>'+o.help+'</small>':''}</label>${c}</div>`;
+  setTimeout(()=>{const el=document.getElementById(id); if(!el)return;
+    el.onchange=()=>onchange(o.kind==='bool'?el.checked:el.value)},0);
+  return html;
+}
+
+async function loadOpts(){
+  const j = await api('/api/options'); if(!j) return; OPT=j;
+  $('#optTitle').textContent = j.name+': Einstellungen';
+  $('#opts').innerHTML = j.options.map(o=>control(o, v=>api('/api/option',{scope:'mode',mode:j.mode,key:o.key,value:v}))).join('');
+}
+
+async function loadGlobals(){
+  const j = await api('/api/options'); if(!j) return;
+  $('#globals').innerHTML = j.globals.map(g=>`<div class="card" style="margin-top:14px"><h3>${g.title}</h3>${
+    g.options.map(o=>control(o, v=>api('/api/option',{scope:'global',group:g.group,key:o.key,value:v}))).join('')}</div>`).join('');
+}
+
+// Bild antippen: Hörstrahl (Diagnose) oder Maske zeichnen (Überwachung)
+function imgPos(e){ const r=$('#img').getBoundingClientRect(); const p=e.touches?e.touches[0]:e;
+  // Gesamtbild 800x480, das Kamerabild (640x360) ist darin auf 800x450 skaliert und mittig
+  const fx=(p.clientX-r.left)/r.width, fy=(p.clientY-r.top)/r.height;
+  return {x:fx, y:(fy*480-15)/450} }
+$('#img').addEventListener('pointerdown', e=>{ const p=imgPos(e);
+  if(masking){maskStart=p;return}
+  api('/api/touch',{x:p.x,y:p.y}) });
+$('#img').addEventListener('pointerup', async e=>{ if(!masking||!maskStart) return; const p=imgPos(e);
+  const m=[Math.min(maskStart.x,p.x),Math.min(maskStart.y,p.y),Math.max(maskStart.x,p.x),Math.max(maskStart.y,p.y)].map(v=>Math.max(0,Math.min(1,v)));
+  const cur=(S.mode_status&&S.mode_status.masks)||[]; await setMasks(cur.concat([m])); masking=false; maskStart=null; $('#maskBtn').classList.remove('on') });
+function maskMode(){ masking=!masking; $('#maskBtn').classList.toggle('on',masking) }
+const setMasks = m => api('/api/masks',{masks:m});
+
+async function loadRec(){
+  const m=$('#recMode').value; const j=await api('/api/recordings'+(m?'?mode='+m:'')); if(!j)return;
+  $('#files').innerHTML = j.length? j.map(f=>{ const u='/files/'+encodeURI(f.path);
+    let pv=''; if(f.type==='bild') pv=`<img loading="lazy" src="${u}">`; else if(f.type==='video') pv=`<video preload="none" controls src="${u}"></video>`; else if(f.type==='audio') pv=`<audio preload="none" controls src="${u}"></audio>`;
+    return `<div class="file">${pv}<div class="n"><input type="checkbox" class="sel" value="${f.path}"> ${f.name}</div>
+    <div class="hud">${new Date(f.time*1000).toLocaleString('de-CH')} · ${(f.size/1e6).toFixed(1)} MB</div>
+    <div class="a"><a href="${u}?dl=1"><button>Herunterladen</button></a><button class="danger" onclick="del('${f.path}')">Löschen</button></div></div>`}).join('') : '<div class="hud">Noch keine Aufnahmen.</div>';
+}
+async function del(p){ if(!confirm('Löschen?'))return; await api('/api/recordings/'+encodeURI(p),{}, 'DELETE'); loadRec() }
+async function zipSel(){ const paths=[...document.querySelectorAll('.sel:checked')].map(x=>x.value); if(!paths.length)return alert('Nichts ausgewählt');
+  const r=await fetch('/api/recordings.zip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paths})});
+  const b=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='multitool.zip'; a.click() }
+
+async function loadEv(){
+  const m=$('#evMode').value; const j=await api('/api/events?limit=300'+(m?'&mode='+m:'')); if(!j)return;
+  const names=Object.fromEntries((S.modes||[]).map(x=>[x.key,x.name]));
+  $('#evBody').innerHTML = j.map(e=>`<tr><td>${new Date(e.ts*1000).toLocaleString('de-CH')}</td><td>${names[e.mode]||e.mode}</td><td>${e.kind}</td><td>${e.label||''}</td>
+   <td>${e.direction==null?'':Math.round(e.direction)+'°'}</td><td>${e.level!=null?Math.round(e.level)+' dB':(e.confidence!=null?e.confidence.toFixed(2):'')}</td>
+   <td>${e.file?`<a href="/files/${encodeURI(e.file)}" target="_blank">öffnen</a>`:''}</td></tr>`).join('');
+}
+
+function sysView(s){
+  const b=s.battery||{};
+  $('#sysKv').innerHTML = `<div>Akku</div><div>${fmtBat(b)} · ${b.voltage||'?'} V · ${b.current!=null?b.current+' A':''}</div>
+   <div>Restlaufzeit</div><div>${b.minutes_left!=null?Math.floor(b.minutes_left/60)+' h '+(b.minutes_left%60)+' min':'-'}</div>
+   <div>CPU-Temperatur</div><div>${s.cpu_temp||'?'} °C</div>
+   <div>Speicher frei</div><div>${s.disk.free_gb??'?'} von ${s.disk.total_gb??'?'} GB (Aufnahmen ${s.disk.used_recordings_gb??'?'} GB)</div>
+   <div>Mikrofon</div><div>${s.audio_ok?'ok':'Fehler: '+s.audio_error}</div>
+   <div>Kamera</div><div>${s.camera_error?'Fehler: '+s.camera_error:'ok'}</div>
+   <div>Laufzeit</div><div>${Math.floor(s.uptime_s/3600)} h ${Math.floor(s.uptime_s%3600/60)} min</div>
+   <div>Version</div><div>${s.version}${s.sim?' (Simulation)':''}</div>`;
+  const n=s.network;
+  $('#netKv').innerHTML = `<div>Modus</div><div>${n.mode}</div><div>Netz</div><div>${n.ssid||'-'}</div><div>Adresse</div><div>${n.ip||'-'}</div>
+   <div>Hotspot</div><div>${n.hotspot_ssid} / ${n.hotspot_password}</div>`;
+  const q=$('#qr'); if(q.style.display==='none'){q.src='/api/qr'; q.style.display=''}
+}
+
+async function addWifi(){ $('#wMsg').textContent='Verbinde ... (dauert bis 60 s, die Verbindung zur Webseite kann kurz abbrechen)';
+  const j=await api('/api/wifi',{ssid:$('#wSsid').value,password:$('#wPw').value}); if(j) $('#wMsg').textContent=j.ok?'Verbunden.':'Fehler: '+j.message }
+async function chPw(){ const j=await api('/api/password',{password:$('#newPw').value}); alert(j&&j.ok?'Passwort geändert':'Fehler: '+(j&&j.error)) }
+</script>
+</body>
+</html>

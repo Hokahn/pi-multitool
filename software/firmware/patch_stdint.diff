@@ -1,0 +1,22 @@
+diff --git a/examples/usb_microphone_array/main.h b/examples/usb_microphone_array/main.h
+index c0bfbc5..3e79670 100644
+--- a/examples/usb_microphone_array/main.h
++++ b/examples/usb_microphone_array/main.h
+@@ -1,5 +1,6 @@
+ #ifndef MAIN__H
+ #define MAIN__H
++#include <stdint.h>
+ 
+ //-------------------------
+ // I2s defines
+diff --git a/examples/usb_microphone_array_led/main.h b/examples/usb_microphone_array_led/main.h
+index c0bfbc5..3e79670 100644
+--- a/examples/usb_microphone_array_led/main.h
++++ b/examples/usb_microphone_array_led/main.h
+@@ -1,5 +1,6 @@
+ #ifndef MAIN__H
+ #define MAIN__H
++#include <stdint.h>
+ 
+ //-------------------------
+ // I2s defines

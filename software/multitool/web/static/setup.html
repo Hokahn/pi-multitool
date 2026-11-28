@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Erster Start</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0f1318;color:#e8edf2;font:16px system-ui,sans-serif;padding:16px}
+form{background:#171d24;border:1px solid #26303b;border-radius:14px;padding:22px;width:100%;max-width:380px}
+h1{font-size:20px;margin:0 0 8px}
+.h{color:#93a1b0;font-size:14px}
+input,button{width:100%;font:inherit;padding:11px;border-radius:8px;border:1px solid #26303b;background:#202833;color:#e8edf2;margin-top:8px}
+button{background:#3d8bff;border-color:#3d8bff;cursor:pointer}
+p{color:#ff7b7b;min-height:1.2em;margin:8px 0 0}
+</style></head>
+<body><form onsubmit="go(event)">
+<h1>Willkommen</h1>
+<div class="h">Lege ein Passwort für die Webseite fest (mindestens 6 Zeichen). Es schützt Livebild und Aufnahmen.</div>
+<input type="password" id="a" placeholder="Passwort" autocomplete="new-password">
+<input type="password" id="b" placeholder="Passwort wiederholen" autocomplete="new-password">
+<button>Speichern</button><p id="e"></p></form>
+<script>
+async function go(ev){ev.preventDefault();
+ const a=document.getElementById('a').value,b=document.getElementById('b').value,e=document.getElementById('e');
+ if(a!==b){e.textContent='Die Passwörter sind verschieden';return}
+ const r=await fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:a})});
+ const j=await r.json(); if(r.ok) location.href='/'; else e.textContent=j.error||'Fehler';}
+</script></body></html>
